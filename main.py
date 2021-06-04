@@ -39,6 +39,7 @@ def extract_characters(text):
     names = [x for x in names if x not in filtered_latin_actIV]
     names = [x for x in names if x not in filtered_act_v]
     names.remove("SCENE.")
+    # TODO: Tweaks for generic case
     # names.remove("BOTH.")
     # names.remove("ALL.")
 
@@ -50,6 +51,7 @@ def cleanUp_list(text, characters):
     cleanList = list()
     for string in stringList:
         if len(string) > 3:
+            # TODO: Tweaks for generic case
             # res = any(map(string.__contains__, characters))
             # if res:
             #     names = re.findall(r'[A-Z]+[\\.$]', string)
@@ -63,6 +65,7 @@ def cleanUp_list(text, characters):
 
 
 def create_data_frame(dialogue_list, characters):
+
     columnNames = ["id", "act", "person", "dialogue"]
     dialogue_df = pd.DataFrame(columns=columnNames)
 
@@ -82,9 +85,17 @@ def create_data_frame(dialogue_list, characters):
     dialoge = ''
 
     startTrackingDialogue = False
+    # Logic goes as:
+    # Iterate each row
+    #   Find the first row that matches a person
+    #   Save the next row in a local var
+    #   Until we find the row that matches the next person
+    #   when we find the next person we store the id, actNumber, dialogue and person in our dataframe row
+    # Repeat till EOF
 
     for row in dialogue_list:
         s = row# your string here
+        # TODO: Tweaks for generic case re.sub('\[.*?\].', '', s)
         row = re.sub('_\[.*?\]_.', '', s)
         if row in acts:
             actIncremental += 1
@@ -105,7 +116,7 @@ def create_data_frame(dialogue_list, characters):
                 if startTrackingDialogue:
                     dialoge += row
 
-    print(dialogue_df)
+
     return dialogue_df
 
 
@@ -131,22 +142,33 @@ def find_sentiment(play_df):
 
     emotions_df = pd.DataFrame.from_dict(listOfEmotions)
 
-    print(emotions_df)
 
     return play_df, emotions_df
 
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     # dollhouse = load_etext(15492, refresh_cache=True)
+    # Set the book id in order to be retrieved
     book_id = 2542
 
+    # load_etext loads the book with book_id from gutenberg.com
+    # strin_headers removes the licensing information
     text = strip_headers(load_etext(book_id))
-    names = extract_characters(text)
-    stringList = cleanUp_list(text, names)
 
+    # start the processing by extracting the persons of the play
+    # various heuristics rules applied
+    # might need some tweaks in order to play in a generic case
+    # search for #TODO
+
+    names = extract_characters(text)
+
+    # get the list seperating each row and extracting the dialogueId, act, dialogueString
+    stringList = cleanUp_list(text, names)
+    # create a pandas dataframe in order to make our life easier manipulating the data
     df = create_data_frame(stringList, names)
+    # run the sentiment check for each dialogue
     df, emotions_df = find_sentiment(df)
+
+    # outputs
     cwd = os.getcwd()
     path = cwd + f'/play_analysis_{book_id}.csv'
     em_path = cwd + f'/play_emotions_{book_id}.csv'
@@ -157,9 +179,8 @@ if __name__ == '__main__':
     df.to_csv(path)
     emotions_df.to_csv(em_path)
 
+    # Needs pandas 1.3 to work! (as of 04/06/2021 still in beta)
     # df.to_xml(path_xml)
     # emotions_df.to_xml(em_path_xml)
 
-
-    print(df)
 
